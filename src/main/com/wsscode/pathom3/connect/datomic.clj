@@ -155,19 +155,22 @@
 (defn datomic-subquery-q
   "Compute nested sub-query using the planner capabilities and run the query on Datomic
   pulling the necessary data out."
-  [{::keys [db] ::pcp/keys [node graph] :as env} {:keys [::pco/op-name] ::p.attr/keys [attribute]} query]
-  (let [attr    (or attribute (-> node ::pcp/expects ffirst))
-        ast     (get-in graph [::pcp/index-ast attr])
-        sub-ast (-> (pcp/compute-dynamic-nested-requirements
+  ([env datomic-source query]
+   (datomic-subquery-q env datomic-source query []))
+  ([{::keys [db] ::pcp/keys [node graph] :as env} {:keys [::pco/op-name] ::p.attr/keys [attribute]} query inputs]
+   (let [attr    (or attribute (-> node ::pcp/expects ffirst))
+         ast     (get-in graph [::pcp/index-ast attr])
+         sub-ast (-> (pcp/compute-dynamic-nested-requirements
                       (assoc env :edn-query-language.ast/node ast
-                        ::pco/dynamic-name op-name
-                        ::p.attr/attribute attr
-                        ::pco/op-name (::pco/op-name node)))
-                    (pfsd/shape-descriptor->ast))
-        config  (get-in env [::datomic-config op-name])]
-    (->> (raw-datomic-q config (assoc query :find [(list 'pull '?e (inject-ident-subqueries config sub-ast))])
-                        (or db (raw-datomic-db config (::conn config))))
-         (map (comp #(post-process-entity config %) #(or % {}) first)))))
+                             ::pco/dynamic-name op-name
+                             ::p.attr/attribute attr
+                             ::pco/op-name (::pco/op-name node)))
+                     (pfsd/shape-descriptor->ast))
+         config  (get-in env [::datomic-config op-name])]
+     (->> (apply raw-datomic-q config (assoc query :find [(list 'pull '?e (inject-ident-subqueries config sub-ast))])
+                         (or db (raw-datomic-db config (::conn config)))
+                         inputs)
+          (map (comp #(post-process-entity config %) #(or % {}) first))))))
 
 (defn query-entities
   "Use this helper from inside a resolver to run a Datomic query.
@@ -191,14 +194,18 @@
           [:country/name]}]}]
   The sub-query will be send to Datomic, filtering out unsupported keys
   like `:not-in/datomic`."
-  [env datomic-source dquery]
-  (vec (datomic-subquery-q env datomic-source dquery)))
+  ([env datomic-source dquery]
+   (vec (datomic-subquery-q env datomic-source dquery)))
+  ([env datomic-source dquery inputs]
+   (vec (datomic-subquery-q env datomic-source dquery inputs))))
 
 (defn query-entity
   "Like query-entities, but returns a single result. This leverage Datomic
   single result :find, meaning it is effectively more efficient than query-entities."
-  [env datomic-source dquery]
-  (first (datomic-subquery-q env datomic-source dquery)))
+  ([env datomic-source dquery]
+   (first (datomic-subquery-q env datomic-source dquery)))
+  ([env datomic-source dquery inputs]
+   (first (datomic-subquery-q env datomic-source dquery inputs))))
 
 (defn make-resolver [op-name config output-attr f-or-query query-fn]
   (pco/resolver op-name
