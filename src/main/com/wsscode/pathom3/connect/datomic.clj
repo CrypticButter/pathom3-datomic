@@ -37,7 +37,7 @@
 (defn raw-datomic-db [{::keys [datomic-driver-db]} conn]
   (datomic-driver-db conn))
 
-(defn db->schema
+(defn datomic-db->schema
   "Extracts the schema from a Datomic db."
   [env db]
   (->> (raw-datomic-q env '[:find (pull ?e [* {:db/valueType [:db/ident]}
@@ -51,6 +51,9 @@
          (fn [schema entry]
            (assoc schema (:db/ident entry) entry))
          {})))
+
+(defn db->schema [{::keys [get-db-schema]} db]
+  ((or get-db-schema datomic-db->schema) db))
 
 (defn schema->uniques
   "Return a set with the ident of the unique attributes in the schema."
@@ -155,7 +158,7 @@
   [{::keys [db] ::pcp/keys [node graph] :as env} {:keys [::pco/op-name] ::p.attr/keys [attribute]} query]
   (let [attr    (or attribute (-> node ::pcp/expects ffirst))
         ast     (get-in graph [::pcp/index-ast attr])
-        sub-ast (-> (pcp/compute-dynamic-resolver-nested-requirements
+        sub-ast (-> (pcp/compute-dynamic-nested-requirements
                       (assoc env :edn-query-language.ast/node ast
                         ::pco/dynamic-name op-name
                         ::p.attr/attribute attr
