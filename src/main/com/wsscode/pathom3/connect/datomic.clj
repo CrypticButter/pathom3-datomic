@@ -128,7 +128,7 @@
    {::keys [db]
     :as    env}
    input]
-  (let [id          (pick-ident-key config input)
+  (let [id          (pick-ident-key config (:com.wsscode.pathom3.connect.runner/node-resolver-input input))
         foreign-ast (-> env ::pcp/node ::pcp/foreign-ast)]
     (cond
       (nil? id) nil
@@ -168,8 +168,8 @@
                      (pfsd/shape-descriptor->ast))
          config  (get-in env [::datomic-config op-name])]
      (->> (apply raw-datomic-q config (assoc query :find [(list 'pull '?e (inject-ident-subqueries config sub-ast))])
-                         (or db (raw-datomic-db config (::conn config)))
-                         inputs)
+                 (or db (raw-datomic-db config (::conn config)))
+                 inputs)
           (map (comp #(post-process-entity config %) #(or % {}) first))))))
 
 (defn query-entities
