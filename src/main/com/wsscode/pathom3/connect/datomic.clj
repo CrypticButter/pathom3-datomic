@@ -13,6 +13,7 @@
     [com.wsscode.pathom3.format.shape-descriptor :as pfsd]
     [com.wsscode.pathom3.interface.smart-map :as psm]
     [edn-query-language.core :as eql]))
+(require '[debux.core :refer [dbg]])
 
 (s/def ::db any?)
 (s/def ::schema (s/map-of ::p.attr/attribute map?))
@@ -238,39 +239,39 @@
   (let [entity-attr     (datomic-entity-attribute config)
         schema-output   (into []
                               (comp
-                                (remove (comp #(some->> % namespace (re-find #"^db\.?"))))
-                                (map (fn [field]
-                                       (if (ref-attribute? config field)
-                                         {field [entity-attr]}
-                                         field))))
+                               (remove (comp #(some->> % namespace (re-find #"^db\.?"))))
+                               (map (fn [field]
+                                      (if (ref-attribute? config field)
+                                        {field [entity-attr]}
+                                        field))))
                               (keys schema))
         entity-resolver (pco/resolver (symbol (namespace op-name) "datomic-entity-resolver")
-                          {::pco/dynamic-name op-name
-                           ::pco/input        [entity-attr]
-                           ::pco/output       schema-output})]
+                                      {::pco/dynamic-name op-name
+                                       ::pco/input        [entity-attr]
+                                       ::pco/output       schema-output})]
     (pci/register
-      {::pci/transient-attrs entity-attr}
-      (cond-> [(pco/resolver {::datomic?              true
-                              ::pco/op-name           op-name
-                              ::pco/cache?            false
-                              ::pco/dynamic-resolver? true
-                              ::pco/resolve           (fn datomic-resolve-internal [env input]
-                                                        (datomic-resolve config
-                                                                         (merge {::db (raw-datomic-db config (::conn config))}
-                                                                                env)
-                                                                         input))})
-               entity-resolver]
+     {::pci/transient-attrs entity-attr}
+     (cond-> [(pco/resolver {::datomic?              true
+                             ::pco/op-name           op-name
+                             ::pco/cache?            false
+                             ::pco/dynamic-resolver? true
+                             ::pco/resolve           (fn datomic-resolve-internal [env input]
+                                                       (datomic-resolve config
+                                                                        (merge {::db (raw-datomic-db config (::conn config))}
+                                                                               env)
+                                                                        input))})
+              entity-resolver]
 
-        admin-mode?
-        (into
-          (map
-            (fn [attr]
-              (let [resolver-name (symbol (namespace op-name) (str "datomic-ident-" (pbir/attr-munge attr)))]
-                (pco/resolver resolver-name
-                  {::pco/dynamic-name op-name
-                   ::pco/input        [attr]
-                   ::pco/output       [entity-attr]}))))
-          (conj schema-uniques :db/id))))))
+       admin-mode?
+       (into
+        (map
+         (fn [attr]
+           (let [resolver-name (symbol (namespace op-name) (str "datomic-ident-" (pbir/attr-munge attr)))]
+             (pco/resolver resolver-name
+                           {::pco/dynamic-name op-name
+                            ::pco/input        [attr]
+                            ::pco/output       [entity-attr]}))))
+        (conj schema-uniques :db/id))))))
 
 (>defn connect-datomic
   "Plugin to add datomic integration.

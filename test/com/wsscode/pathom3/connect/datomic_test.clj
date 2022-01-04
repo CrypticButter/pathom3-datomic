@@ -515,13 +515,13 @@
                                    [?e :artist/startYear ?year]
                                    [(< ?year 1600)]]}))
 
+
 (def artist-before-1600
   (pcd/entity-resolver `artist-before-1600 db-config
                        :artist/artist-before-1600
                        '{:where [[?e :artist/name ?name]
                                  [?e :artist/startYear ?year]
                                  [(< ?year 1600)]]}))
-
 (def all-mediums
   (pcd/entities-resolver `all-mediums db-config
                          :all-mediums

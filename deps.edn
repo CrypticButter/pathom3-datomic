@@ -2,8 +2,9 @@
  ["src/main"]
 
  :deps
- {com.wsscode/pathom3 {:git/url "https://github.com/wilkerlucio/pathom3" :sha "00813aa7fb2d2d31c6734f2d26310000d55cde48"}
-  juxt/crux-core      {:mvn/version "21.06-1.17.1-beta"}}
+ {com.wsscode/pathom3 {:mvn/version "2021.07.30-alpha"}
+  juxt/crux-core      {:mvn/version "21.06-1.17.1-beta"}
+  org.clojure/core.async {:mvn/version "1.3.618"}}
 
  :aliases
  {:provided
@@ -12,6 +13,9 @@
 
   :on-prem
   {:extra-deps {com.datomic/datomic-free {:mvn/version "0.9.5703.21"}}}
+
+  :datahike
+  {:extra-deps {io.replikativ/datahike {:mvn/version "0.3.6"}}}
 
   :tasks
   {:extra-deps  {babashka/babashka {:mvn/version "0.3.6"}}
